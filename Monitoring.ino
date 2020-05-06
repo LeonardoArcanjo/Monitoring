@@ -3,7 +3,7 @@
     About:  This code uses a ESP32 with MQ-2 sensor, DHT11 sensor, DS18B20 sensor and Water level sensor
             to monitor a room envoriment and a water tank. This project uses MQTT protocol in order to user
             can view the datas in MQTT Dashboard as subscriber.
-    Version: 3.0
+    Version: 3.1
     Ps: MQ-2 Sensor Functions and constants were obtained from: http://sandboxelectronics.com/?p=165
 */
 
@@ -43,6 +43,12 @@
 #define GAS_CO 1
 #define GAS_SMOKE 2
 
+// Constants used in DS12B80 sensor calibration 
+#define RawHigh 98.5
+#define RawLow -0.5
+#define ReferenceHigh 99.67 
+#define ReferenceLow -0.17
+
 /*Define periferics pins*/
 #define BUZZER 18
 #define BUTTON 19
@@ -80,11 +86,11 @@ DallasTemperature sensors(&oneWire);
    of its application.
 */
 const char* ssid = "xxxxxxx";
-const char* password = "xxxxxxxxx";
+const char* password = "xxxxxxxxxxx";
 const char* mqttServer = "mqtt.eclipse.org";
 const int mqttPort = 1883;
-const char* mqttUser = "xxxxxxxxxx";
-const char* mqttPassword = "xxxxxxxxx";
+const char* mqttUser = "xxxxxxxxxxxxxx";
+const char* mqttPassword = "xxxxxxxxxxx";
 
 /*Time Constants to reference and to send message with parameters measured to MQTT broker */
 unsigned long verifyTime = 0;
@@ -238,7 +244,10 @@ void readSensorDB(float &tempTank) {
      Return: none
   */
   sensors.requestTemperatures();
-  tempTank = sensors.getTempCByIndex(0);
+  float tempRead = sensors.getTempCByIndex(0);
+  float RawRange = RawHigh - RawLow;
+  float ReferenceRange = ReferenceHigh - ReferenceLow;
+  tempTank = ((tempRead - RawLow)*ReferenceRange/RawRange) + ReferenceLow;
 }
 
 int readTankLvl() {
