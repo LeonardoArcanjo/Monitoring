@@ -3,7 +3,7 @@
     About:  This code uses a ESP32 with MQ-2 sensor, DHT11 sensor, DS18B20 sensor and Water level sensor
             to monitor a room envoriment and a water tank. This project uses MQTT protocol in order to user
             can view the datas in MQTT Dashboard as subscriber.
-    Version: 3.1
+    Version: 3.0
     Ps: MQ-2 Sensor Functions and constants were obtained from: http://sandboxelectronics.com/?p=165
 */
 
@@ -85,12 +85,12 @@ DallasTemperature sensors(&oneWire);
    Ps: The user has to create MQTT User and Passwords because they're uniques and to keep the security
    of its application.
 */
-const char* ssid = "xxxxxxx";
-const char* password = "xxxxxxxxxxx";
+const char* ssid = "xxxxxxxxxxx";
+const char* password = "xxxxxxxxxxxxx";
 const char* mqttServer = "mqtt.eclipse.org";
 const int mqttPort = 1883;
 const char* mqttUser = "xxxxxxxxxxxxxx";
-const char* mqttPassword = "xxxxxxxxxxx";
+const char* mqttPassword = "xxxxxxxxxxxxx";
 
 /*Time Constants to reference and to send message with parameters measured to MQTT broker */
 unsigned long verifyTime = 0;
@@ -156,6 +156,7 @@ void setup() {
   dht.begin();
 
   sensors.begin();
+  sensors.setResolution(10);
 
   pinMode(BUZZER, OUTPUT);
   pinMode(BUTTON, INPUT);
@@ -328,19 +329,19 @@ void sendMsg(float temperatura, float umidade, float glp, float co, float fumo, 
                 Float temperature Tank  (ºC)
                 int Level Tank
   */
-  char MsgTemperatura[4];
+  char MsgTemperatura[5];
   char MsgUmidade[4];
   char MsgGLP[4];
   char MsgCO[4];
   char MsgSMOKE[4];
-  char MsgTank[3];
+  char MsgTank[5];
 
   int f = (float)umidade;
   int g = (float)glp;
   int c = (float)co;
   int s = (float)fumo;
 
-  sprintf(MsgTemperatura, "%f", temperatura);
+  sprintf(MsgTemperatura, "%.2f", temperatura);
   client.publish("Capelas/temperature", MsgTemperatura);
   sprintf(MsgUmidade, "%i", f);
   client.publish("Capelas/humidity", MsgUmidade);
@@ -350,7 +351,7 @@ void sendMsg(float temperatura, float umidade, float glp, float co, float fumo, 
   client.publish("Capelas/CO", MsgCO);
   sprintf(MsgSMOKE, "%i", s);
   client.publish("Capelas/SMOKE", MsgSMOKE);
-  sprintf(MsgTank, "%f", tanque);
+  sprintf(MsgTank, "%.2f", tanque);
   client.publish("Capelas/Tank", MsgTank);
 
   switch (nivel) {
