@@ -1,4 +1,4 @@
-/*  Envoriment Monitoring of Fume hood room OPTIMa/UFAM
+ /*  Envoriment Monitoring of Fume hood room OPTIMa/UFAM
     Author: Leonardo Arcanjo - github: leonardoarcanjo
     About:  This code uses a ESP32 with MQ-2 sensor, DHT11 sensor, DS18B20 sensor and Water level sensor
             to monitor a room envoriment and a water tank. This project uses MQTT protocol in order to user
@@ -43,11 +43,9 @@
 #define GAS_CO 1
 #define GAS_SMOKE 2
 
-// Constants used in DS12B80 sensor calibration 
-#define RawHigh 98.5
-#define RawLow -0.5
-#define ReferenceHigh 99.67 
-#define ReferenceLow -0.17
+// Constants used in DS18B20 sensor calibration 
+#define a 0.9723
+#define b 1.0016
 
 /*Define periferics pins*/
 #define BUZZER 18
@@ -75,6 +73,7 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 OneWire oneWire(DBSensor);
 DallasTemperature sensors(&oneWire);
+DeviceAddress tempDeviceAddress; 
 
 /*MQTT and WIFI constants used to connection:
    ssid: Wifi network name
@@ -85,12 +84,12 @@ DallasTemperature sensors(&oneWire);
    Ps: The user has to create MQTT User and Passwords because they're uniques and to keep the security
    of its application.
 */
-const char* ssid = "xxxxxxxxxxx";
-const char* password = "xxxxxxxxxxxxx";
+const char* ssid = "xxxxxxxx";
+const char* password = "xxxxxxxxxx";
 const char* mqttServer = "mqtt.eclipse.org";
 const int mqttPort = 1883;
-const char* mqttUser = "xxxxxxxxxxxxxx";
-const char* mqttPassword = "xxxxxxxxxxxxx";
+const char* mqttUser = "xxxxxxxxxx";
+const char* mqttPassword = "xxxxxxxx";
 
 /*Time Constants to reference and to send message with parameters measured to MQTT broker */
 unsigned long verifyTime = 0;
@@ -157,7 +156,7 @@ void setup() {
 
   sensors.begin();
   sensors.setResolution(10);
-
+  
   pinMode(BUZZER, OUTPUT);
   pinMode(BUTTON, INPUT);
   pinMode(WSENSOR1, INPUT);
@@ -179,16 +178,16 @@ void loop() {
   float fumaca = 0;
   int LvlTank;
 
-  readSensorDHT(temp, humid);
-  readSensorDB(temp_tank);
   readSensorMQ(GLP, Mono, fumaca);
-  LvlTank = readTankLvl();
-
+  
   if (GLP > 100.0 || Mono > 11.0 || fumaca > 10.0) digitalWrite(BUZZER, HIGH);
   else if (checkButton()) digitalWrite(BUZZER, LOW);
 
   if ((millis() - verifyTime) > returnTime) {
     verifyTime = millis();
+    readSensorDHT(temp, humid);
+    readSensorDB(temp_tank);
+    LvlTank = readTankLvl();
     if (!client.connected()) connectBroker();
     showSerial(temp, humid, GLP, Mono, fumaca, temp_tank, LvlTank);
     sendMsg(temp, humid, GLP, Mono, fumaca, temp_tank, LvlTank);
@@ -246,9 +245,7 @@ void readSensorDB(float &tempTank) {
   */
   sensors.requestTemperatures();
   float tempRead = sensors.getTempCByIndex(0);
-  float RawRange = RawHigh - RawLow;
-  float ReferenceRange = ReferenceHigh - ReferenceLow;
-  tempTank = ((tempRead - RawLow)*ReferenceRange/RawRange) + ReferenceLow;
+  tempTank = a * tempRead + b;
 }
 
 int readTankLvl() {
@@ -329,6 +326,7 @@ void sendMsg(float temperatura, float umidade, float glp, float co, float fumo, 
                 Float temperature Tank  (ºC)
                 int Level Tank
   */
+  //Buffers utilizados onde os valores convertidos em strings vao ser armazenados
   char MsgTemperatura[5];
   char MsgUmidade[4];
   char MsgGLP[4];
