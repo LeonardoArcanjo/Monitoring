@@ -3,7 +3,7 @@
     About:  This code uses a ESP32 with MQ-2 sensor, DHT11 sensor, DS18B20 sensor and Water level sensor
             to monitor a room envoriment and a water tank. This project uses MQTT protocol in order to user
             can view the datas in MQTT Dashboard as subscriber.
-    Version: 3.0
+    Version: 3.3
     Ps: MQ-2 Sensor Functions and constants were obtained from: http://sandboxelectronics.com/?p=165
 */
 
@@ -44,8 +44,12 @@
 #define GAS_SMOKE 2
 
 // Constants used in DS18B20 sensor calibration 
-#define a 0.9723
-#define b 1.0016
+#define a 1.117
+#define b -1.679
+
+// Constants used in DHT11 sensor calibration
+#define a1 -0.922
+#define b1 61.772
 
 /*Define periferics pins*/
 #define BUZZER 18
@@ -84,12 +88,13 @@ DeviceAddress tempDeviceAddress;
    Ps: The user has to create MQTT User and Passwords because they're uniques and to keep the security
    of its application.
 */
+
 const char* ssid = "xxxxxxxx";
-const char* password = "xxxxxxxxxx";
+const char* password = "xxxxxxxxxxx";
 const char* mqttServer = "mqtt.eclipse.org";
 const int mqttPort = 1883;
-const char* mqttUser = "xxxxxxxxxx";
-const char* mqttPassword = "xxxxxxxx";
+const char* mqttUser = "xxxxxxxxxxxxxxx";
+const char* mqttPassword = "xxxxxxxxxxxx";
 
 /*Time Constants to reference and to send message with parameters measured to MQTT broker */
 unsigned long verifyTime = 0;
@@ -155,7 +160,7 @@ void setup() {
   dht.begin();
 
   sensors.begin();
-  sensors.setResolution(10);
+  sensors.setResolution(11);
   
   pinMode(BUZZER, OUTPUT);
   pinMode(BUTTON, INPUT);
@@ -233,7 +238,7 @@ void readSensorDHT(float &t, float &h) {
                   Ps: The parameters are passed by reference only to refresh the values in loop function
      Return: none
   */
-  t = dht.readTemperature();
+  t = a1 * dht.readTemperature() + b1;
   h = dht.readHumidity();
 }
 
