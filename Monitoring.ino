@@ -3,7 +3,7 @@
     About:  This code uses a ESP32 with MQ-2 sensor, DHT11 sensor, DS18B20 sensor and Water level sensor
             to monitor a room envoriment and a water tank. This project uses MQTT protocol in order to user
             can view the datas in MQTT Dashboard as subscriber.
-    Version: 3.3
+    Version: 3.4
     Ps: MQ-2 Sensor Functions and constants were obtained from: http://sandboxelectronics.com/?p=165
 */
 
@@ -44,12 +44,8 @@
 #define GAS_SMOKE 2
 
 // Constants used in DS18B20 sensor calibration 
-#define a 1.117
-#define b -1.679
-
-// Constants used in DHT11 sensor calibration
-#define a1 -0.922
-#define b1 61.772
+#define a 1.023
+#define b -0.7
 
 /*Define periferics pins*/
 #define BUZZER 18
@@ -88,13 +84,12 @@ DeviceAddress tempDeviceAddress;
    Ps: The user has to create MQTT User and Passwords because they're uniques and to keep the security
    of its application.
 */
-
-const char* ssid = "xxxxxxxx";
-const char* password = "xxxxxxxxxxx";
+const char* ssid = "xxxxxxxxxx";
+const char* password = "xxxxxxxxxxx";;
 const char* mqttServer = "mqtt.eclipse.org";
 const int mqttPort = 1883;
-const char* mqttUser = "xxxxxxxxxxxxxxx";
-const char* mqttPassword = "xxxxxxxxxxxx";
+const char* mqttUser = "xxxxxxxxxxxxxxxx";
+const char* mqttPassword = "xxxxxxxxxxxxxx";
 
 /*Time Constants to reference and to send message with parameters measured to MQTT broker */
 unsigned long verifyTime = 0;
@@ -184,15 +179,15 @@ void loop() {
   int LvlTank;
 
   readSensorMQ(GLP, Mono, fumaca);
+  readSensorDHT(temp, humid);
+  readSensorDB(temp_tank);
+  LvlTank = readTankLvl();
   
   if (GLP > 100.0 || Mono > 11.0 || fumaca > 10.0) digitalWrite(BUZZER, HIGH);
   else if (checkButton()) digitalWrite(BUZZER, LOW);
 
   if ((millis() - verifyTime) > returnTime) {
     verifyTime = millis();
-    readSensorDHT(temp, humid);
-    readSensorDB(temp_tank);
-    LvlTank = readTankLvl();
     if (!client.connected()) connectBroker();
     showSerial(temp, humid, GLP, Mono, fumaca, temp_tank, LvlTank);
     sendMsg(temp, humid, GLP, Mono, fumaca, temp_tank, LvlTank);
@@ -238,7 +233,7 @@ void readSensorDHT(float &t, float &h) {
                   Ps: The parameters are passed by reference only to refresh the values in loop function
      Return: none
   */
-  t = a1 * dht.readTemperature() + b1;
+  t = dht.readTemperature();
   h = dht.readHumidity();
 }
 
