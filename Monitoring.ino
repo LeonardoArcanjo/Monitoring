@@ -3,7 +3,7 @@
     About:  This code uses a ESP32 with MQ-2 sensor, DHT11 sensor, DS18B20 sensor and Water level sensor
             to monitor a room envoriment and a water tank. This project uses MQTT protocol in order to user
             can view the datas in MQTT Dashboard as subscriber.
-    Version: 3.4
+    Version: 3.5 
     Ps: MQ-2 Sensor Functions and constants were obtained from: http://sandboxelectronics.com/?p=165
 */
 
@@ -17,7 +17,7 @@
 #include <DallasTemperature.h>
 
 /*Define DHT pins*/
-#define DHTPIN 23                         //Pin connected to DATA pin from DHT11 sensor
+#define DHTPIN 15                         //Pin connected to DATA pin from DHT11 sensor
 #define DHTTYPE DHT11                     //Type of DHT sensor
 
 /*Define MQ Sensor Pins and a few parameters of sample, read and convertion to ppm unit
@@ -32,7 +32,7 @@
    GAS_CO - Carbon Monoxide index in MQ sensor read function and in convert to ppm function
    GAS_SMOKE - Smoke index in MQ sensor read function and in convert to ppm function
 */
-#define MQ_PIN 34
+#define MQ_PIN 33
 #define RL_VALUE 1
 #define RO_CLEAN_AIR_FACTOR 9.83
 #define CALIBRATION_SAMPLE_TIMES  50
@@ -48,16 +48,16 @@
 #define b -0.7
 
 /*Define periferics pins*/
-#define BUZZER 18
-#define BUTTON 19
+#define BUZZER 4
+#define BUTTON 22
 
 /*Define Water Level Sensors pins*/
-#define WSENSOR1 4
-#define WSENSOR2 15
-#define WSENSOR3 21
+#define WSENSOR1 5
+#define WSENSOR2 18
+#define WSENSOR3 19
 
 /*Define Tank Temperature Sensor Pin*/
-#define DBSensor 22
+#define DBSensor 21
 
 /*Reference points from MQ-2 Sensor Grafic*/
 float LPGCurve[3] = {2.3, 0.21, -0.47};
@@ -84,12 +84,13 @@ DeviceAddress tempDeviceAddress;
    Ps: The user has to create MQTT User and Passwords because they're uniques and to keep the security
    of its application.
 */
-const char* ssid = "xxxxxxxxxx";
-const char* password = "xxxxxxxxxxx";;
+
+const char* ssid = "xxxxxxxxxxxxxx";
+const char* password = "xxxxxxxxxxxxxx";;
 const char* mqttServer = "mqtt.eclipse.org";
 const int mqttPort = 1883;
-const char* mqttUser = "xxxxxxxxxxxxxxxx";
-const char* mqttPassword = "xxxxxxxxxxxxxx";
+const char* mqttUser = "xxxxxxxxxxxxxxx";
+const char* mqttPassword = "xxxxxxxxxxxxxxxxx";
 
 /*Time Constants to reference and to send message with parameters measured to MQTT broker */
 unsigned long verifyTime = 0;
@@ -132,7 +133,9 @@ void setup() {
   Serial.println("Initializing...");
   Serial.println("Heating the sensor");
   delay(60000);
-
+  
+  pinMode(MQ_PIN, INPUT);
+  
   Ro = calibrationMQ(MQ_PIN);
   Serial.print("Ro = ");
   Serial.print(Ro);
@@ -179,6 +182,12 @@ void loop() {
   int LvlTank;
 
   readSensorMQ(GLP, Mono, fumaca);
+  Serial.print("GLP: ");
+  Serial.println(GLP);
+  Serial.print("Mono: ");
+  Serial.println(Mono);
+  Serial.print("fumaca: ");
+  Serial.println(fumaca);
   readSensorDHT(temp, humid);
   readSensorDB(temp_tank);
   LvlTank = readTankLvl();
@@ -372,14 +381,14 @@ void sendMsg(float temperatura, float umidade, float glp, float co, float fumo, 
 }
 
 float calibrationMQ(int mq_pin) {
-  /***************************** MQCalibration ****************************************
-    Input:   mq_pin - analog channel
+/***************************** MQCalibration ****************************************
+  Input:   analog reading
     Output:  Ro of the sensor
     Remarks: This function assumes that the sensor is in clean air. It use
          MQResistanceCalculation to calculates the sensor resistance in clean air
          and then divides it with RO_CLEAN_AIR_FACTOR. RO_CLEAN_AIR_FACTOR is about
          10, which differs slightly between different sensors.
-  ************************************************************************************/
+************************************************************************************/
   int i = 0;
   float val = 0;
 
@@ -387,6 +396,7 @@ float calibrationMQ(int mq_pin) {
     val += MQResistanceCalculation(analogRead(mq_pin));
     delay(CALIBRATION_SAMPLE_INTERVAL);
   }
+  
   val = val / CALIBRATION_SAMPLE_TIMES;
 
   val = val / RO_CLEAN_AIR_FACTOR;
@@ -432,14 +442,12 @@ float MQRead(int mq_pin) {
   ************************************************************************************/
   int i;
   float rs = 0;
-
   for (i = 0; i < READ_SAMPLE_TIMES; i++) {
     rs += MQResistanceCalculation(analogRead(mq_pin));
     delay(READ_SAMPLE_INTERVAL);
   }
-
+  
   rs = rs / READ_SAMPLE_TIMES;
-
   return rs;
 }
 
