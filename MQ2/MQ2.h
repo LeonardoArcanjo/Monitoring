@@ -1,16 +1,16 @@
 /*
+File: MQ2.h
 Author: Leonardo Arcanjo - leonardoarcanjoo@gmail.com
 Year: 2020
 Version: 1.0
 Description: This library was created in order to reduce code in Envoriment Monitoring.ino. All following methods and constants, 
-it was obtained from: http://sandboxelectronics.com/?p=165
-
+it was obtained from: http://sandboxelectronics.com/?p=165 
 Support:  Tiequan Shao: support[at]sandboxelectronics.com
- 
 Licence: Attribution-NonCommercial-ShareAlike 3.0 Unported (CC BY-NC-SA 3.0)
- 
 Note:    This piece of source code is supposed to be used as a demostration ONLY. More
          sophisticated calibration is required for industrial field application.
+
+Besides a few explanations about how sensor works was taken from: Gas Sensors MQ Series Principle https://forum.arduino.cc/index.php?topic=416377.0 
 */
 
 #ifndef MQ2_H
@@ -21,6 +21,7 @@ Note:    This piece of source code is supposed to be used as a demostration ONLY
 
 #define RO_CLEAN_AIR_FACTOR 9.83 
 
+/* Substances detected by sensor*/
 typedef enum {
 	LPG, CO, SMOKE
 } subsType;
