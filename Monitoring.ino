@@ -57,16 +57,21 @@ MQ2 GasSensor(MQ_PIN);
    Ps: The user has to create MQTT User and Passwords because they're uniques and to keep the security
    of its application.
 */
-const char* ssid = "xxxxxxxxxxxxxxxxx";
-const char* password = "xxxxxxxxxxxx";
-const char* mqttServer = "mqtt.eclipse.org";
+const char* ssid = "XXXXXXXXXXXX";
+const char* password = "xxxxxxxxxx";
+const char* mqttServer = "xxxxxxxxxxxxxxxxxx";
 const int mqttPort = 1883;
-const char* mqttUser = "xxxxxxxxxxxx";
-const char* mqttPassword = "xxxxxxxxxxxxxxx";
+const char* mqttUser = "xxxxxxxxxxx";
+const char* mqttPassword = "xxxxxxxxxxxxxxxxxxx";
 
 /*Time Constants to reference and to send message with parameters measured to MQTT broker */
 unsigned long verifyTime = 0;
-unsigned long returnTime = 30000; //Time to send a message tp broker
+unsigned long returnTime = 20000; //Time to send a message
+
+
+/* Time Constants to reference in Temperature Sensors Reading*/
+unsigned long verifySensorTime = 0;
+unsigned long ResponseSensorTime = 10000;
 
 /*Connection functions*/
 void wifi(void);
@@ -123,7 +128,7 @@ void setup() {
 
   sensors.begin();
   sensors.setResolution(11);
-  
+    
   pinMode(BUZZER, OUTPUT);
   pinMode(BUTTON, INPUT);
   pinMode(WSENSOR1, INPUT);
@@ -143,17 +148,22 @@ void loop() {
   float GLP = 0;
   float Mono = 0;
   float fumaca = 0;
-  int LvlTank;
+  int LvlTank = 0;
 
   readSensorMQ(GLP, Mono, fumaca);
-  readSensorDHT(temp, humid);
-  readSensorDB(temp_tank);
   LvlTank = readTankLvl();
+
+
+  if (millis() - verifySensorTime > ResponseSensorTime) {  //Temperature Sensors reading every 10 seconds 
+    verifySensorTime = millis();
+    readSensorDHT(temp, humid);
+    readSensorDB(temp_tank);
+  }
   
   if (GLP > 100.0 || Mono > 11.0 || fumaca > 10.0) digitalWrite(BUZZER, HIGH);
   else if (checkButton()) digitalWrite(BUZZER, LOW);
 
-  if ((millis() - verifyTime) > returnTime) {
+  if ((millis() - verifyTime) > returnTime) {  //Send a MQTT message every 30 seconds
     verifyTime = millis();
     if (!client.connected()) connectBroker();
     showSerial(temp, humid, GLP, Mono, fumaca, temp_tank, LvlTank);
@@ -201,7 +211,7 @@ void readSensorDHT(float &t, float &h) {
      Return: none
   */
   t = dht.readTemperature();
-  h = dht.readHumidity();
+  h = dht.readHumidity() - 4;
 }
 
 void readSensorDB(float &tempTank) {
@@ -229,10 +239,10 @@ int readTankLvl() {
   int sensor2 = digitalRead(WSENSOR2);
   int sensor3 = digitalRead(WSENSOR3);
 
-  if (sensor3 == false && sensor2 == true && sensor1 == true) return 4;
-  else if (sensor3 == true && sensor2 == true && sensor1 == true) return 3;
-  else if (sensor3 == true && sensor2 == false && sensor1 == true) return 2;
-  else if (sensor3 == true && sensor2 == false && sensor1 == false) return 1;
+  if (sensor3 == true && sensor2 == true && sensor1 == true) return 4;
+  else if (sensor3 == false && sensor2 == true && sensor1 == true) return 3;
+  else if (sensor3 == false && sensor2 == false && sensor1 == true) return 2;
+  else if (sensor3 == false && sensor2 == false && sensor1 == false) return 1;
   else return -1;
 }
 
@@ -300,6 +310,7 @@ void sendMsg(float temperatura, float umidade, float glp, float co, float fumo, 
   char MsgCO[4];
   char MsgSMOKE[4];
   char MsgTank[5];
+  char levelTank[4];
 
   int f = (float)umidade;
   int g = (float)glp;
@@ -308,34 +319,40 @@ void sendMsg(float temperatura, float umidade, float glp, float co, float fumo, 
 
   sprintf(MsgTemperatura, "%.2f", temperatura);
   client.publish("Capelas/temperature", MsgTemperatura);
+  
   sprintf(MsgUmidade, "%i", f);
   client.publish("Capelas/humidity", MsgUmidade);
+  
   sprintf(MsgGLP, "%i", g);
   client.publish("Capelas/GLP", MsgGLP);
+  
   sprintf(MsgCO, "%i", c);
   client.publish("Capelas/CO", MsgCO);
+  
   sprintf(MsgSMOKE, "%i", s);
   client.publish("Capelas/SMOKE", MsgSMOKE);
+  
   sprintf(MsgTank, "%.2f", tanque);
   client.publish("Capelas/Tank", MsgTank);
 
   switch (nivel) {
     case 4:
-      client.publish("Capelas/LTank", "Cheio");
+      sprintf(levelTank, "%i", 100); 
       break;
     case 3:
-      client.publish("Capelas/LTank", "Acima Metade");
+      sprintf(levelTank, "%i", 75);
       break;
     case 2:
-      client.publish("Capelas/LTank", "Abaixo Metade");
+      sprintf(levelTank, "%i", 50);
       break;
     case 1:
-      client.publish("Capelas/LTank", "Seco");
+      sprintf(levelTank, "%i", 0);
       break;
     case -1:
-      client.publish("Capelas/LTank", "ErroR");
+      sprintf(levelTank, "%i", -1);
       break;
   }
+  client.publish("Capelas/LTank", levelTank);
 }
 
 void readSensorMQ(float &gas, float &monox, float &fumarola) {
